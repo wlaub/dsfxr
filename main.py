@@ -97,11 +97,11 @@ class PhysicsDemo:
 
         ypos += h+3
 
-        self.params = []
+        self.params = {}
         for name, (vmin, vmax, vdef) in params.items():
             s = ui.Slider(self, name, xpos, ypos, w, h, vmin, vmax, vdef)
             self.widgets.append(s)
-            self.params.append(s)
+            self.params[name] = s
             ypos += h+3
 
         #variance
@@ -110,11 +110,15 @@ class PhysicsDemo:
         w = 300
         h = 21
 
-        self.variance_sliders = []
+        def update_variance(self):
+            self.app.params[self.label].variance = self.value
+
+        self.variance_sliders = {}
         for name, (vmin, vmax, vdef) in params.items():
             s = ui.Slider(self, name, xpos, ypos, w, h, 0,0.5,0)
+            s.on_change = update_variance
             self.widgets.append(s)
-            self.variance_sliders.append(s)
+            self.variance_sliders[name]=s
             ypos += h+3
 
 
@@ -280,23 +284,28 @@ class PhysicsDemo:
 
     def apply_sound_to_sliders(self):
         params = self.sound.as_dict()
-        for s in self.params:
-            if s.label in params.keys():
-                s.value = params[s.label]
+        default_params = pyfxr.SFXR()
+        for s in self.params.values():
+            s.value = params.get(s.label, getattr(default_params, s.label))
         if 'wave_type' in params.keys():
             self.wave_type = params['wave_type']
-            self.update_wave_buttons()
+        else:
+            self.wave_type = default_params.wave_type.value
+        self.update_wave_buttons()
 
     def get_sound(self):
         if not self.sound_valid or True:
             self.sound_valid = True
-            params = {x.label:x.value for x in self.params}
+            params = {x.label:x.value for x in self.params.values()}
 
-            variance = {x.label:x.value for x in self.variance_sliders}
+            variance = {x.label:x.value for x in self.variance_sliders.values()}
 
             for param, value in params.items():
                 v = variance[param]
-                params[param] += random.uniform(-v,v)
+                offset = random.uniform(-v,v)
+                params[param] += offset
+                self.params[param].pointer = params[param]
+                self.variance_sliders[param].pointer = offset
 
             params['wave_type'] = self.wave_type
             self.sound = pyfxr.SFXR(**params)
