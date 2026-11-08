@@ -107,7 +107,9 @@ class Slider:
         pygame.draw.rect(screen, var_color, pygame.Rect(self.xpos+1+dxl, self.ypos+1, w, self.height-2))
 
         if self.pointer is not None:
-            p = max(self.vmin,min(self.vmax,abs(self.pointer)))
+            p = min(self.vmax,self.pointer)
+            if p < self.vmin:
+                p = 2*self.vmin-p
             px = (p-self.vmin)/(self.vrange)*(self.width-2)
             pygame.draw.line(screen, (0,0,0), (self.xpos+1+px, self.ypos), (self.xpos+1+px, self.ypos+self.height))
 
