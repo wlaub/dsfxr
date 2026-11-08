@@ -94,10 +94,17 @@ class Slider:
         dx = (v-self.vmin)/(self.vrange)*(self.width-2)
         pygame.draw.rect(screen, fill_color, pygame.Rect(self.xpos+1, self.ypos+1, dx, self.height-2))
 
-        text = font.render(f'{self.label} {self.value:0.2f}', True, fg_color)
-        x = self.xpos + (self.width-text.width)/2
+        text = font.render(f'{self.label}', True, fg_color)
+#        x = self.xpos + (self.width-text.width)/2
+        x = self.xpos + 2
         y = self.ypos + (self.height-text.height)/2
         screen.blit(text, (x,y))
+
+        text = font.render(f'{self.value:0.2f}', True, fg_color)
+        x = self.xpos + self.width - text.width - 2
+        y = self.ypos + (self.height-text.height)/2
+        screen.blit(text, (x,y))
+
 
     def update(self, mpos):
         self.hovered = self.rect.collidepoint(mpos)

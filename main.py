@@ -2,6 +2,7 @@ import os, sys
 import math, time
 import datetime
 import json
+import random
 
 import pygame
 import pygame.mixer
@@ -103,6 +104,21 @@ class PhysicsDemo:
             self.params.append(s)
             ypos += h+3
 
+        #variance
+        xpos = 430
+        ypos = 10+21+3
+        w = 300
+        h = 21
+
+        self.variance_sliders = []
+        for name, (vmin, vmax, vdef) in params.items():
+            s = ui.Slider(self, name, xpos, ypos, w, h, 0,0.5,0)
+            self.widgets.append(s)
+            self.variance_sliders.append(s)
+            ypos += h+3
+
+
+
 
         self.channel = None
         self.sound_valid = False
@@ -118,17 +134,14 @@ class PhysicsDemo:
 
         b.callback = self.play_sound
         self.widgets.append(b)
-        ypos += h+7
+        ypos += h+21
 
         b = ui.Button(self, 'randomize', xpos, ypos, w, h)
         def randomize():
-            print(time.time())
             self.sound = pyfxr.randomize()
-            print(time.time())
+            self.sound.wave_type = self.wave_type
             self.apply_sound_to_sliders()
-            print(time.time())
             self.play_sound()
-            print(time.time())
 
         b.callback = randomize
         self.widgets.append(b)
@@ -143,7 +156,7 @@ class PhysicsDemo:
 
         b.callback = mutate
         self.widgets.append(b)
-        ypos += h+7
+        ypos += h+21
 
         presets = {
                 'pickup/coin': pyfxr.pickup,
@@ -275,9 +288,16 @@ class PhysicsDemo:
             self.update_wave_buttons()
 
     def get_sound(self):
-        if not self.sound_valid:
+        if not self.sound_valid or True:
             self.sound_valid = True
             params = {x.label:x.value for x in self.params}
+
+            variance = {x.label:x.value for x in self.variance_sliders}
+
+            for param, value in params.items():
+                v = variance[param]
+                params[param] += random.uniform(-v,v)
+
             params['wave_type'] = self.wave_type
             self.sound = pyfxr.SFXR(**params)
         return self.sound
