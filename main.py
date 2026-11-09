@@ -52,7 +52,7 @@ class PhysicsDemo:
 
         self.widgets = []
 
-        rows = [10,220,330,540,750]
+        rows = [10,220,330,540,850]
 
         xpos = rows[0]
         ypos = 10
@@ -129,7 +129,7 @@ class PhysicsDemo:
 
         xpos = rows[3]
         ypos = 10
-        w = 200
+        w = 300
         h = 21
 
         self.wave_type = 0
@@ -140,9 +140,12 @@ class PhysicsDemo:
             self.sound_valid = False
             self.play_sound()
 
-        for i, wave in enumerate(['sq','saw','sine','noise']):
+        waves = ['sq', 'saw', 'sine', 'noise']
+        dw = (w-(len(waves)-1)*3)/len(waves)
 
-            b = ui.Button(self, wave, xpos+i*w/4, ypos, w/4-3, h)
+        for i, wave in enumerate(waves):
+
+            b = ui.Button(self, wave, xpos+i*(dw+3), ypos, dw, h)
 
             b.callback = lambda i=i: wave_button(i)
             self.widgets.append(b)

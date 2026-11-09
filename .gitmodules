@@ -1,0 +1,3 @@
+[submodule "pyfxr"]
+	path = pyfxr
+	url = git@github.com:wlaub/pyfxr.git
