@@ -10,7 +10,7 @@ import pygame.mixer
 import pyfxr
 
 import ui
-from config import Config
+from config import Project
 
 
 class PhysicsDemo:
@@ -25,6 +25,7 @@ class PhysicsDemo:
                 print(f"----------------------: stats dmp'd")
                 print(f"----------------------: state clr'd")
             except Exception as e:
+                raise
                 print(e)
 
     def __init__(self):
@@ -46,7 +47,60 @@ class PhysicsDemo:
 
         self.font = pygame.font.Font(None, 28)
 
+        self.history = []
+        self.files = {}
+
         self.widgets = []
+
+        rows = [10,220,330,540,750]
+
+        xpos = rows[0]
+        ypos = 10
+        w = 200
+        h =  self.hs-20
+
+        def on_file_select(self, target):
+            filename, project = target
+
+            params = project.current['params']
+            variance = project.current['variance']
+            self.app.load_params(params, variance)
+            self.app.version_select.active = None
+
+
+
+        self.file_select = l = ui.ListBox(self, 'files', xpos, ypos, w, h)
+        l.items = lambda: sorted(self.files.items())
+        l.on_select = on_file_select
+        l.is_item_dirty = lambda x: x.dirty
+
+        self.widgets.append(l)
+
+
+
+        xpos = rows[1]
+        ypos = 10
+        w = 100
+        h =  self.hs-20
+
+        self.version_select = l = ui.ListBox(self, 'undo', xpos, ypos, w, h)
+        def version_select_items():
+            if (active := self.file_select.active) is not None:
+                return list(enumerate(active[1].versions))[::-1]
+            return []
+
+        def on_version_select(self, item):
+            idx, version = item
+            params = version['params']
+            variance = version['variance']
+            self.app.load_params(params, variance)
+
+        l.on_select = on_version_select
+        l.items = version_select_items
+
+
+        self.widgets.append(l)
+
 
         params = {  'env_attack':(0,1,0),
                     'env_sustain':(0,1,0.3),
@@ -73,7 +127,7 @@ class PhysicsDemo:
                     'sound_vol':(0,1,0.5),
                     }
 
-        xpos = 220
+        xpos = rows[3]
         ypos = 10
         w = 200
         h = 21
@@ -105,7 +159,7 @@ class PhysicsDemo:
             ypos += h+3
 
         #variance
-        xpos = 430
+        xpos = rows[4]
         ypos = 10+21+3
         w = 300
         h = 21
@@ -129,7 +183,7 @@ class PhysicsDemo:
         self.get_sound()
 
 
-        xpos = 10
+        xpos = rows[2]
         ypos = 10
         w = 200
         h = 28
@@ -186,13 +240,32 @@ class PhysicsDemo:
             self.widgets.append(b)
             ypos += h+3
 
+        ypos += 21
+
+
+        b = ui.Button(self, 'save', xpos, ypos, w, h)
+        def save_project():
+            if (active := self.file_select.active) is not None:
+                project = active[1]
+                if project.dirty:
+                    project.save()
+
+        b.callback = save_project
+        self.widgets.append(b)
+        ypos += h+21
+
 
 
         self.running = True
 
+        source_dir = 'sounds/projects'
+        for filebase in os.listdir(source_dir):
+            filename = os.path.join(source_dir, filebase)
+            project = Project.load(self, filename)
+            self.files[project.name] = project
+
         """
         source_dir = 'sounds/references'
-        self.configs = {}
         for filebase in os.listdir(source_dir):
             filename = os.path.join(source_dir, filebase)
 
@@ -202,29 +275,16 @@ class PhysicsDemo:
             with open(filename, 'r') as fp:
                 raw = json.load(fp)
             params = {k[2:]:v for k,v in raw.items() if k[:2] == 'p_'}
-
-            for param in {'env_attack', 'arp_speed', 'duty', 'lpf_resonance', 'env_punch', 'vib_strength', 'hpf_freq'}:
-                if params[param] < 0:
-                    params[param]*=-1
-
             params['wave_type'] = raw['wave_type']
+            params.pop('vib_delay',None)
 
-            if params.get('vib_delay', False) is None:
-                params.pop('vib_delay',None)
+            project = Project(self, name, os.path.join('sounds/projects', f'{name}.json'))
+            project.current['params'] = params
 
-            thing = pyfxr.SFXR(**params)
-            buffer = thing.build()
+            self.files[name] = project
+        """
 
-            config = Config(name, params)
-            self.configs[name] = config
-
-            if name == 'player_dead_1' and False:
-                print(thing.as_dict())
-                dead_thing = thing
-                sound = pygame.mixer.Sound(buffer=buffer)
-                channel = sound.play()
-                time.sleep(sound.get_length()+1)
-
+        """
 
         with open('sounds/real_sfxr.json', 'rb') as fp:
             import struct
@@ -282,6 +342,22 @@ class PhysicsDemo:
                 button.bg_color = (255,255,255)
 
 
+    def load_params(self, params, variance):
+        for param, value in params.items():
+            if param == 'wave_type':
+                self.wave_type = value
+            else:
+                self.params[param].value=value
+
+        for param, value in variance.items():
+            self.variance_sliders[param].value=value
+
+
+        self.update_wave_buttons()
+        self.sound_valid = False
+        self.play_sound()
+
+
     def apply_sound_to_sliders(self):
         params = self.sound.as_dict()
         default_params = pyfxr.SFXR()
@@ -297,18 +373,35 @@ class PhysicsDemo:
         if not self.sound_valid or True:
             self.sound_valid = True
             params = {x.label:x.value for x in self.params.values()}
+            params['wave_type'] = self.wave_type
 
             variance = {x.label:x.value for x in self.variance_sliders.values()}
 
-            for param, value in params.items():
+            if (active:=self.file_select.active) is not None:
+                active[1].update_params(params, variance)
+                if active[1].dirty:
+                    self.version_select.active = None
+
+            for param, _ in self.params.items():
                 v = variance[param]
                 offset = random.uniform(-v,v)
                 params[param] += offset
                 self.params[param].pointer = params[param]
                 self.variance_sliders[param].pointer = offset
 
-            params['wave_type'] = self.wave_type
             self.sound = pyfxr.SFXR(**params)
+
+            """
+            if len(self.history) > 0:
+                last_label, last = self.history[0]
+                new = (params,variance)
+                if new != last:
+                    self.history.insert(0,(last_label+1,new))
+            else:
+                self.history.append((0, (params, variance)))
+            """
+
+
         return self.sound
 
     def play_sound(self):

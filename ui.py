@@ -148,3 +148,76 @@ class Slider:
 
 
 
+class ListBox:
+    def __init__(self, app, label, xpos, ypos, width, height):
+        self.app = app
+        self.label = label
+        self.xpos = xpos
+        self.ypos = ypos
+        self.width = width
+        self.height = height
+
+        self.line_height = 21
+
+        self.rect = pygame.Rect(xpos, ypos, width, height)
+
+        self.clicked_on = False
+        self.hovered = False
+
+        self.active = None
+        self.on_select = None
+
+        self.items = lambda: []
+
+        self.is_item_dirty = lambda x: False
+
+    def render(self, screen):
+        font = self.app.font
+
+        bg_color = (128,128,128)
+
+        fg_color = (0,0,0)
+
+        sel_color = (128,128,255)
+
+        pygame.draw.rect(screen, bg_color, self.rect)
+
+        x = self.xpos + 1
+        y = self.ypos +1
+        for label, item in self.items():
+            if (label, item) == self.active:
+                pygame.draw.rect(screen, sel_color, pygame.Rect(x, y, self.width-2, self.line_height))
+
+            string = str(label)
+            if self.is_item_dirty(item):
+                string += '*'
+            text = font.render(string, True, fg_color)
+
+            screen.blit(text, (x,y))
+            y+= self.line_height
+
+    def update(self, mpos):
+        self.hovered = self.rect.collidepoint(mpos)
+
+    def mouse_down(self, mpos):
+        if self.hovered:
+            self.clicked_on = True
+
+    def mouse_to_idx(self, mpos):
+        y = (mpos[1]-self.ypos-1)/self.line_height
+        return int(y)
+
+    def mouse_up(self, mpos):
+        if self.clicked_on:
+            idx = self.mouse_to_idx(mpos)
+            items = list(self.items())
+            if len(items) > idx:
+                target = items[idx]
+                if self.active != target:
+                    self.active = target
+                    if self.on_select:
+                        self.on_select(self, target)
+        self.clicked_on = False
+
+
+
