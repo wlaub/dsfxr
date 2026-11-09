@@ -1,1 +1,1 @@
-from dsfxr import *
+from .dsfxr import *
