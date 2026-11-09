@@ -7,25 +7,31 @@ import json
 
 
 class Project:
-    def __init__(self, app, name, filename):
+    def __init__(self, app, filename):
         self.app = app
-        self.name = name
         self.filename = filename
+        self.name = self._get_name(filename)
+        self.basedir = self._get_basedir(filename)
         self.versions = []
         self.current = {'params':{},'variance':{}}
         self.dirty = True
+
+    def _get_name(self, filename):
+        return filename.split('/')[-1][:-5]
+
+    def _get_basedir(self, filename):
+        return os.path.join(*(filename.split('/')[:-1]))
 
     @classmethod
     def load(cls, app, filename):
         with open(filename, 'r') as fp:
             data = json.load(fp)
-        result = cls(app, data['name'], filename)
+        result = cls(app, filename)
         result.from_dict(data)
         result.dirty_check()
         return result
 
     def from_dict(self, data):
-        self.name = data['name']
         self.current = data['current']
         self.versions = data['versions']
 

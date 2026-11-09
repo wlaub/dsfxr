@@ -3,11 +3,14 @@ import math, time
 import datetime
 import json
 import random
+import shutil
 
 import pygame
 import pygame.mixer
 
 import pyfxr
+
+import crossfiledialog as cfd
 
 import ui
 from config import Project
@@ -29,6 +32,11 @@ class PhysicsDemo:
                 print(e)
 
     def __init__(self):
+
+        source_dir = 'sounds/projects'
+        if len(sys.argv) > 1:
+            source_dir = sys.argv[1]
+        self.source_dir = source_dir
 
         pygame.mixer.pre_init(44100, channels=2)
 
@@ -210,7 +218,7 @@ class PhysicsDemo:
 
         b = ui.Button(self, 'mutate', xpos, ypos, w, h)
         def mutate():
-            sound = self.get_sound()
+            sound = self.get_sound(raw=True)
             self.sound = sound.mutate()
             self.apply_sound_to_sliders()
             self.play_sound()
@@ -258,10 +266,42 @@ class PhysicsDemo:
         ypos += h+21
 
 
+        b = ui.Button(self, 'fork', xpos, ypos, w, h)
+        def fork_project():
+            if (active := self.file_select.active) is not None:
+                project = active[1]
+                new_filename = cfd.save_file('', os.path.abspath(project.basedir))
+                if new_filename == '': return
+                shutil.copy(project.filename, new_filename)
+                project = Project.load(self, new_filename)
+                self.files[project.name] = project
+
+        b.callback = fork_project
+        self.widgets.append(b)
+        ypos += h+21
+
+        b = ui.Button(self, 'new', xpos, ypos, w, h)
+        def new_project():
+            new_filename = cfd.save_file('', os.path.abspath(self.source_dir))
+            if new_filename == '': return
+            project = Project(self, new_filename)
+
+            default = pyfxr.SFXR()
+            project.current['params'] = {k:getattr(default, k)for k,v in self.params.items()}
+            project.current['params']['wave_type'] = 0
+            self.files[project.name] = project
+
+        b.callback = new_project
+        self.widgets.append(b)
+        ypos += h+21
+
+
+        #TODO active_version
+        #TODO variant_count
+
 
         self.running = True
 
-        source_dir = 'sounds/projects'
         for filebase in os.listdir(source_dir):
             filename = os.path.join(source_dir, filebase)
             project = Project.load(self, filename)
@@ -381,7 +421,7 @@ class PhysicsDemo:
             self.wave_type = default_params.wave_type.value
         self.update_wave_buttons()
 
-    def get_sound(self):
+    def get_sound(self, raw=False):
         if not self.sound_valid or True:
             self.sound_valid = True
             params = {x.label:x.value for x in self.params.values()}
@@ -394,12 +434,14 @@ class PhysicsDemo:
                 if active[1].dirty:
                     self.version_select.active = None
 
-            for param, _ in self.params.items():
-                v = variance[param]
-                offset = random.uniform(-v,v)
-                params[param] += offset
-                self.params[param].pointer = params[param]
-                self.variance_sliders[param].pointer = offset
+            if not raw:
+                for param, _ in self.params.items():
+                    v = variance[param]
+                    offset = random.uniform(-v,v)
+                    params[param] += offset
+                    self.params[param].pointer = params[param]
+                    self.params[param].variance = v
+                    self.variance_sliders[param].pointer = offset
 
             self.sound = pyfxr.SFXR(**params)
 

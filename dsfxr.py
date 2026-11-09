@@ -18,9 +18,11 @@ class SoundManager:
             sound_path = filebase[:-5]
             thing = SoundInfo(filename)
             self.sound_infos[sound_path] = thing
-            print(f'loaded {sound_path}')
+#            print(f'loaded {sound_path}')
 
         self.queues = {}
+
+        #TODO sound regen thread?
 
     def get_sound(self, sound_path, version = None):
         #path_to_sound[:version]
@@ -29,7 +31,7 @@ class SoundManager:
                 sound_path, version = sound_path.split(':')
                 version = int(version)
             except:
-                version = -1
+                version = None
         queue = self.get_queue(sound_path, version)
         result = queue.get_sound()
         return result
@@ -38,6 +40,8 @@ class SoundManager:
         key = (sound_path, version)
         if not key in self.queues.keys():
             si = self.sound_infos[sound_path]
+            if version is None:
+                version = si.active_version
             if version < 0:
                 version += len(si.versions)
             self.queues[key] = DSFXR(si, version)
@@ -50,6 +54,7 @@ class SoundInfo:
         self.name = data['name']
         self.variant_count = data.get('variant_count', 7)
         self.versions = {i:x for i,x in enumerate(data['versions'])}
+        self.active_version = data.get('active_version', len(self.versions)-1)
 
 
 
@@ -70,6 +75,7 @@ class DSFXR:
         self.pool = []
         self.dirty = False
 
+        #TODO lazy build
         for _ in range(self.variant_count):
             self.variants.append(self._make_sound())
 
@@ -87,10 +93,11 @@ class DSFXR:
         return sound
 
     def make_sound(self):
-        sound = self._make_sound()
-        self.variants.append(sound)
-        self.variants = self.variants[1:]
-        self.dirty = False
+        if self.dirty:
+            sound = self._make_sound()
+            self.variants.append(sound)
+            self.variants = self.variants[1:]
+            self.dirty = False
 
     def get_sound(self):
         self.dirty = True
