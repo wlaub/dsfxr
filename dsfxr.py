@@ -1,4 +1,4 @@
-
+import os
 import json
 import random
 
@@ -12,12 +12,13 @@ class SoundManager:
         self.basedir = basedir
 
         self.sound_infos = {}
-        for filebase in os.listdir(source_dir): #TODO walk the tree
+        for filebase in os.listdir(basedir): #TODO walk the tree
             if filebase[-5:] != '.json': continue
-            filename = os.path.join(source_dir, filebase)
-            sound_path = filebase[-5:]
+            filename = os.path.join(basedir, filebase)
+            sound_path = filebase[:-5]
             thing = SoundInfo(filename)
-            self.sounds_infos[sound_path] = thing
+            self.sound_infos[sound_path] = thing
+            print(f'loaded {sound_path}')
 
         self.queues = {}
 
@@ -26,6 +27,7 @@ class SoundManager:
         if version is None:
             try:
                 sound_path, version = sound_path.split(':')
+                version = int(version)
             except:
                 version = -1
         queue = self.get_queue(sound_path, version)
@@ -44,7 +46,7 @@ class SoundManager:
 class SoundInfo:
     def __init__(self, filename):
         with open(filename, 'r') as fp:
-            data = fp.read()
+            data = json.load(fp)
         self.name = data['name']
         self.variant_count = data.get('variant_count', 7)
         self.versions = {i:x for i,x in enumerate(data['versions'])}
@@ -57,8 +59,8 @@ class DSFXR:
         self.variant_count = sound_info.variant_count
 
         self.version = sound_info.versions[version]
-        self.params = version['params']
-        self.variance = version['variance']
+        self.params = self.version['params']
+        self.variance = self.version['variance']
         self.wave_type = self.params.pop('wave_type')
 
         _,_,channels = pygame.mixer.get_init()
@@ -68,21 +70,24 @@ class DSFXR:
         self.pool = []
         self.dirty = False
 
-        for _ in range(self.variant_count)
-            self.make_sound()
+        for _ in range(self.variant_count):
+            self.variants.append(self._make_sound())
 
-    def make_sound(self):
+    def _make_sound(self):
         tparams = {}
         for param, value in self.params.items():
             v = self.variance[param]
             offset = random.uniform(-v,v)
             tparams[param] = value + offset
 
-        thing = pyfxr.SFXR(wave_type = self.wave_type, **params)
+        thing = pyfxr.SFXR(wave_type = self.wave_type, **tparams)
 
         buffer = thing.build(stereo=self.stereo)
         sound = pygame.mixer.Sound(buffer=buffer)
+        return sound
 
+    def make_sound(self):
+        sound = self._make_sound()
         self.variants.append(sound)
         self.variants = self.variants[1:]
         self.dirty = False

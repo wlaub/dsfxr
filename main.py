@@ -11,7 +11,7 @@ import pyfxr
 
 import ui
 from config import Project
-
+import dsfxr
 
 class PhysicsDemo:
 
@@ -266,6 +266,15 @@ class PhysicsDemo:
             filename = os.path.join(source_dir, filebase)
             project = Project.load(self, filename)
             self.files[project.name] = project
+
+        """
+        sm = dsfxr.SoundManager(source_dir)
+
+        for _ in range(7):
+            sound = sm.get_sound('growl_1')
+            sound.play()
+            time.sleep(sound.get_length())
+        """
 
         """
         source_dir = 'sounds/references'
