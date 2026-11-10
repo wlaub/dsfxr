@@ -60,7 +60,7 @@ class PhysicsDemo:
 
         self.widgets = []
 
-        rows = [10,220,330,540,850]
+        rows = [10,220,330,540,850,1150]
 
         xpos = rows[0]
         ypos = 10
@@ -207,7 +207,7 @@ class PhysicsDemo:
 
 
         ypos += 7
-        self.waveform = c = ui.Canvas(self, 'waveform', xpos, ypos, w, 100)
+        self.waveform = c = ui.Canvas(self, 'waveform', xpos, ypos, w, self.hs-10-ypos)
         self.widgets.append(c)
 
 
@@ -349,9 +349,14 @@ class PhysicsDemo:
         self.widgets.append(s)
 
 
+        #spectrogram
+        xpos = rows[5]
+        ypos = 10
+        w = 200
+        h = self.hs=20
 
-        #TODO active_version
-        #TODO variant_count
+        self.spectrogram = c = ui.Canvas(self, 'spec', xpos, ypos, w, h)
+        self.widgets.append(c)
 
 
         self.running = True
@@ -557,6 +562,7 @@ length: {duration*1000:.1f} ms
 {n_samples} samples
 """.strip()
 
+        #first the waveform
         screen = self.waveform.screen
         w,h = screen.get_size()
         dx = n_samples/w
@@ -564,21 +570,23 @@ length: {duration*1000:.1f} ms
         bg_color = (192,192,192)
         w_color = (64,64,64)
 
-        as_list = list(buffer)
+        as_list = list(buffer)[::2]
         screen.fill(bg_color)
         if dx > 1:
             for x in range(w):
                 l = int(x*dx)
                 r = int((x+1)*dx)
-                chunk = as_list[2*l:2*r:2]
+                chunk = as_list[l:r]
                 b = h/2-min(chunk)*h/65535
                 t = h/2-max(chunk)*h/65535
                 pygame.draw.line(screen, w_color, (x,b),(x,t))
         else:
-            for idx, sample in enumerate(as_list[::2]):
+            for idx, sample in enumerate(as_list):
                 x = round(idx/dx)
                 y = h/2-sample*h/65535
                 pygame.draw.line(screen, w_color, (x,h/2),(x,y))
+
+        #then the spectrogram
 
     def draw(self):
         for w in self.widgets:
