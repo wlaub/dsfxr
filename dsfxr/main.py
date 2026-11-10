@@ -70,10 +70,21 @@ class PhysicsDemo:
         def on_file_select(self, target):
             filename, project = target
 
+            self.app.version_select.active = None
+
             params = project.current['params']
             variance = project.current['variance']
+
+            next_version = project.find_version(params, variance)
+            if next_version is None:
+                self.app.version_select.active = None
+            else:
+                for entry in self.app.version_select.items():
+                    if entry[0] == next_version:
+                        self.app.version_select.active = entry
+
             self.app.load_params(params, variance)
-            self.app.version_select.active = None
+
             self.app.active_version_slider.value = project.active_version
             self.app.variant_count_slider.value = project.variant_count
 
@@ -255,12 +266,23 @@ class PhysicsDemo:
         ypos += 21
 
 
+        b = ui.Button(self, 'version+', xpos, ypos, w, h)
+        def version_project():
+            if (active := self.file_select.active) is not None:
+                project = active[1]
+                project.new_version()
+                project.dirty_check()
+
+        b.callback = version_project
+        self.widgets.append(b)
+        ypos += h+21
+
+
         b = ui.Button(self, 'save', xpos, ypos, w, h)
         def save_project():
             if (active := self.file_select.active) is not None:
                 project = active[1]
-                if project.dirty:
-                    project.save()
+                project.save()
 
         b.callback = save_project
         self.widgets.append(b)
@@ -466,8 +488,11 @@ class PhysicsDemo:
 
             if (active:=self.file_select.active) is not None:
                 active[1].update_params(params, variance)
-                if active[1].dirty:
-                    self.version_select.active = None
+                if(av:=self.version_select.active) is not None:
+                    if not active[1].current_matches_version(av[0]):
+                        self.version_select.active = None
+#                if active[1].dirty:
+#                    self.version_select.active = None
 
             if not raw:
                 for param, _ in self.params.items():

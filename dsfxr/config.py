@@ -18,6 +18,8 @@ class Project:
         self.active_version = 0
         self.variant_count = 1
 
+        self.baseline = None
+
     def _get_name(self, filename):
         return filename.split('/')[-1][:-5]
 
@@ -34,8 +36,11 @@ class Project:
         return result
 
     def from_dict(self, data):
+        self.baseline = copy.deepcopy(data)
         self.current = data['current']
         self.versions = data['versions']
+        self.active_version = data.get('active_version', self.active_version)
+        self.variant_count = data.get('variant_count', self.variant_count)
 
     def to_dict(self):
         result = {
@@ -47,14 +52,41 @@ class Project:
             }
         return result
 
-    def save(self):
+    def new_version(self):
         if len(self.versions) == 0 or self.current != self.versions[-1]:
             self.versions.append(copy.deepcopy(self.current))
+
+    def current_matches_version(self, idx):
+        if len(self.versions) == 0 or self.current != self.versions[idx]:
+            return False
+        return True
+
+    def find_version(self, params, variants):
+        target = {'params': params, 'variants': variants}
+        for idx, version in enumerate(self.versions):
+            if target == version:
+                return idx
+        return None
+
+    def save(self):
+        data = self.to_dict()
         with open(self.filename, 'w') as fp:
-            json.dump(self.to_dict(), fp)
+            json.dump(data, fp)
+        self.baseline = data
         self.dirty_check()
 
     def dirty_check(self):
+        self.dirty = False
+        if self.baseline is None:
+            self.dirty = True
+            return
+
+        if len(self.versions) != len(self.baseline['versions']):
+            self.dirty = True
+
+#        if self.current != self.baseline['current']:
+#            self.dirty = True
+
         if len(self.versions) > 0:
             if active:=self.app.version_select.active:
                 last = active[1]
@@ -69,8 +101,8 @@ class Project:
 
 
     def update_params(self, params, variance):
-        self.current['params'] = params
-        self.current['variance'] = variance
+        self.current['params'] = copy.deepcopy(params)
+        self.current['variance'] = copy.deepcopy(variance)
         self.dirty_check()
 
 
