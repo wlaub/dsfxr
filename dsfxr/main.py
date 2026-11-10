@@ -190,9 +190,27 @@ class PhysicsDemo:
 
         #variance
         xpos = rows[4]
-        ypos = 10+21+3
+        ypos = 10
         w = 300
         h = 21
+
+
+
+        self.variance_toggle = b = ui.ToggleButton(self, 'enable', xpos, ypos, w, h)
+        def _variance_toggle():
+            self.play_sound()
+            for slider in self.variance_sliders.values():
+                slider.enabled=self.variance_toggle.active
+
+        b.callback = _variance_toggle
+        b.active = True
+        self.widgets.append(b)
+        ypos += h+3
+
+
+
+
+        ypos = 10+21+3
 
         def update_variance(self):
             self.app.params[self.label].variance = self.value
@@ -348,6 +366,10 @@ class PhysicsDemo:
 
         self.widgets.append(s)
 
+        self.loop_button = b = ui.ToggleButton(self, 'loop', xpos+dw*2, ypos, 63, h)
+        b.callback = self.toggle_loop
+        self.widgets.append(b)
+
 
         #spectrogram
         xpos = rows[5]
@@ -477,6 +499,40 @@ class PhysicsDemo:
                 button.bg_color = (255,255,255)
 
 
+    def toggle_loop(self):
+        loop = self.loop_button.active
+        if loop:
+            if (active := self.file_select.active) is None:
+                self.loop_button.active = False
+                return
+            sound_path = active[0]
+            version = None
+            if (active := self.version_select.active) is not None:
+                version = active[0]
+
+            self.sound_manager = sm = dsfxr.SoundManager(self.source_dir)
+            self.loop_sound = sm.get_sound(sound_path, version)
+            self.loop_channel = self.loop_sound.play()
+
+
+        else:
+            pass
+
+    def inc_loop(self):
+        loop = self.loop_button.active
+        if loop and (self.loop_channel is None or self.loop_channel.get_sound() != self.loop_sound):
+            if (active := self.file_select.active) is None:
+                return
+            sound_path = active[0]
+            version = None
+            if (active := self.version_select.active) is not None:
+                version = active[0]
+
+            self.loop_sound = self.sound_manager.get_sound(sound_path, version)
+            self.loop_channel = self.loop_sound.play()
+
+
+
     def load_params(self, params, variance):
         for param, value in params.items():
             if param == 'wave_type':
@@ -524,6 +580,8 @@ class PhysicsDemo:
                 for param, _ in self.params.items():
                     v = variance[param]
                     offset = random.uniform(-v,v)
+                    if not self.variance_toggle.active:
+                        offset = 0
                     params[param] += offset
                     self.params[param].pointer = params[param]
                     self.params[param].variance = v
@@ -545,13 +603,15 @@ class PhysicsDemo:
         return self.sound
 
     def play_sound(self):
-        if self.channel is not None and self.channel.get_busy():
+        loop = self.loop_button.active
+        if self.channel is not None and self.channel.get_busy() and not loop:
             self.channel.stop()
 
         thing = self.get_sound()
         buffer = thing.build(stereo=True)
         sound = pygame.mixer.Sound(buffer=buffer)
-        self.channel = sound.play()
+        if not loop:
+            self.channel = sound.play()
         self.update_sound_stats(buffer)
 
     def update_sound_stats(self, buffer):
@@ -592,8 +652,6 @@ length: {duration*1000:.1f} ms
         for w in self.widgets:
             w.render(self.main_screen)
 
-    def do_updates(self):
-        pass
     def clear_screen(self):
         self.main_screen.fill((0,0,0))
 
@@ -627,6 +685,7 @@ length: {duration*1000:.1f} ms
 
         now = datetime.datetime.now()
 
+        self.inc_loop()
 
 
         self.clear_screen()

@@ -7,6 +7,7 @@ class Widget:
         pass
 
 class Button(Widget):
+    bg_color = (255,255,255)
     def __init__(self, app, label, xpos, ypos, width, height):
         self.app = app
         self.label = label
@@ -20,20 +21,21 @@ class Button(Widget):
         self.clicked_on = False
         self.hovered = False
 
-        self.callback = lambda : 0
+        self.active = False
 
-        self.bg_color = (255,255,255)
+        self.callback = lambda : 0
 
     def render(self, screen):
         font = self.app.font
 
-        bg_color = self.bg_color if not self.hovered else (128,128,128)
+        active_color = (192,192,255)
+
+        bg_color = self.bg_color if not self.active else active_color
         if self.hovered:
             if self.clicked_on:
-                bg_color = (128,128,128)
+                bg_color = tuple(i/2 for i in bg_color)
             else:
-                bg_color = (192,192,192)
-
+                bg_color = tuple(int(i*3/4) for i in bg_color)
 
         fg_color = (0,0,0)
 
@@ -56,6 +58,17 @@ class Button(Widget):
             self.callback()
 
         self.clicked_on = False
+
+class ToggleButton(Button):
+    bg_color = (255,192,192)
+    def mouse_up(self, mpos):
+        if self.hovered and self.clicked_on:
+            self.active = not self.active
+            self.callback()
+
+        self.clicked_on = False
+
+
 
 
 class Slider(Widget):
@@ -86,21 +99,32 @@ class Slider(Widget):
         self.on_change = None
         self.on_update = None
 
+        self.enabled = True
+
     def render(self, screen):
         font = self.app.font
 
         bg_color = (255,255,255)
-        fill_color = (192,192,128)
+        fill_color = (192,161,128)
         text_color = (0,0,0)
 
         fg_color = (0,0,0)
         var_color = (128,128,192)
+        error_color = (255,192,221)
+
+        if not self.enabled:
+            halve = lambda x: tuple(int(i*3/4) for i in x)
+            bg_color = halve(bg_color)
+            fill_color = halve(fill_color)
+            var_color = halve(var_color)
+            error_color = halve(error_color)
+
 
         vl = max(self.vmin,min(self.vmax,self.value-self.variance))
         vr = max(self.vmin,min(self.vmax,self.value+self.variance))
         v = max(self.vmin,min(self.vmax,self.value))
         if v != self.value:
-            bg_color = (255,192,192)
+            bg_color = error_color
 
         pygame.draw.rect(screen, bg_color, self.rect)
         dx = (v-self.vmin)/(self.vrange)*(self.width-2)
@@ -143,6 +167,11 @@ class Slider(Widget):
         if shift: inc *= 0.1
         if ctrl: inc*= 0.02
         self.value += inc
+        if self.on_update:
+            self.on_update(self)
+        self.app.sound_valid = False
+        self.app.play_sound()
+
 
     def mouse_down(self, mpos):
         if self.hovered:
@@ -245,7 +274,7 @@ class ListBox(Widget):
         y = self.ypos +1
         for label, item in self.items():
             if (label, item) == self.active:
-                pygame.draw.rect(screen, sel_color, pygame.Rect(x, y, self.width-2, self.line_height))
+                pygame.draw.rect(screen, sel_color, pygame.Rect(self.xpos, y, self.width, self.line_height-2))
 
             string = str(label)
             if self.is_item_dirty(item):
