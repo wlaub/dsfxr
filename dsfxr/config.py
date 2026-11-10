@@ -62,7 +62,7 @@ class Project:
         return True
 
     def find_version(self, params, variants):
-        target = {'params': params, 'variants': variants}
+        target = {'params': params, 'variance': variants}
         for idx, version in enumerate(self.versions):
             if target == version:
                 return idx
