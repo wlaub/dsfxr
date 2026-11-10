@@ -298,6 +298,9 @@ class PhysicsDemo:
                 project = active[1]
                 new_filename = cfd.save_file('', os.path.abspath(project.basedir))
                 if new_filename == '': return
+                if not new_filename.endswith('.json'):
+                    new_filename += '.json'
+
                 shutil.copy(project.filename, new_filename)
                 project = Project.load(self, new_filename)
                 self.files[project.name] = project
@@ -310,6 +313,8 @@ class PhysicsDemo:
         def new_project():
             new_filename = cfd.save_file('', os.path.abspath(self.source_dir))
             if new_filename == '': return
+            if not new_filename.endswith('.json'):
+                new_filename += '.json'
             project = Project(self, new_filename)
 
             default = pyfxr.SFXR()
