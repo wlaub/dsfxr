@@ -83,6 +83,8 @@ class PhysicsDemo:
                     if entry[0] == next_version:
                         self.app.version_select.active = entry
 
+            self.app.version_select.marked = project.active_version
+
             self.app.load_params(params, variance)
 
             self.app.active_version_slider.value = project.active_version
@@ -180,6 +182,11 @@ class PhysicsDemo:
             self.widgets.append(s)
             self.params[name] = s
             ypos += h+3
+
+
+        ypos += 7
+        self.stats_box = b = ui.TextBox(self, 'stats', xpos, ypos, w, 100)
+        self.widgets.append(b)
 
         #variance
         xpos = rows[4]
@@ -279,12 +286,8 @@ class PhysicsDemo:
 
 
         b = ui.Button(self, 'save', xpos, ypos, w, h)
-        def save_project():
-            if (active := self.file_select.active) is not None:
-                project = active[1]
-                project.save()
 
-        b.callback = save_project
+        b.callback = self.save_project
         self.widgets.append(b)
         ypos += h+21
 
@@ -431,17 +434,26 @@ class PhysicsDemo:
     def _update_active_version(self, widget):
         if (active := self.file_select.active) is not None:
             active[1].active_version = widget.value
+            active[1].dirty_check()
+            self.version_select.marked = active[1].active_version
 
     def _update_variant_count(self, widget):
         if (active := self.file_select.active) is not None:
             active[1].variant_count = widget.value
-
+            active[1].dirty_check()
 
     def _get_max_version(self):
         if (active := self.file_select.active) is not None:
             return len(active[1].versions)-1
         else:
             return 1000
+
+    def save_project(self):
+        if (active := self.file_select.active) is not None:
+            project = active[1]
+            project.save()
+
+
 
     def update_wave_buttons(self):
         for idx, button in enumerate(self.wave_buttons):
@@ -526,6 +538,16 @@ class PhysicsDemo:
         buffer = thing.build(stereo=True)
         sound = pygame.mixer.Sound(buffer=buffer)
         self.channel = sound.play()
+        self.update_sound_stats(buffer)
+
+    def update_sound_stats(self, buffer):
+        n_samples = len(buffer)/2
+        duration = n_samples/44100
+        self.stats_box.text = f"""
+length: {duration*1000:.1f} ms
+{n_samples} samples
+""".strip()
+
 
     def draw(self):
         for w in self.widgets:
@@ -560,6 +582,9 @@ class PhysicsDemo:
             elif event.type == pygame.MOUSEWHEEL:
                 for w in self.widgets:
                     w.scroll(event.y, self.mods&pygame.KMOD_SHIFT, self.mods&pygame.KMOD_CTRL)
+            elif event.type == pygame.KEYDOWN:
+                if event.key == pygame.K_s and self.mods&pygame.KMOD_CTRL:
+                    self.save_project()
 
         now = datetime.datetime.now()
 

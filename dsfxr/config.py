@@ -37,18 +37,18 @@ class Project:
 
     def from_dict(self, data):
         self.baseline = copy.deepcopy(data)
-        self.current = data['current']
-        self.versions = data['versions']
-        self.active_version = data.get('active_version', self.active_version)
-        self.variant_count = data.get('variant_count', self.variant_count)
+        self.current = copy.deepcopy(data['current'])
+        self.versions = copy.deepcopy(data['versions'])
+        self.active_version = self.baseline.setdefault('active_version', self.active_version)
+        self.variant_count = self.baseline.setdefault('variant_count', self.variant_count)
 
     def to_dict(self):
         result = {
             'name': self.name,
             'current': self.current,
             'versions': self.versions,
-#            'active_version': self.active_version,
-#            'variant_count': self.variant_count,
+            'active_version': self.active_version,
+            'variant_count': self.variant_count,
             }
         return result
 
@@ -84,6 +84,14 @@ class Project:
         if len(self.versions) != len(self.baseline['versions']):
             self.dirty = True
 
+
+        if self.active_version != self.baseline['active_version']:
+            self.dirty = True
+
+        if self.variant_count != self.baseline['variant_count']:
+            self.dirty = True
+
+
 #        if self.current != self.baseline['current']:
 #            self.dirty = True
 
@@ -94,8 +102,6 @@ class Project:
                 last = self.versions[-1]
             if self.current['params'] != last['params'] or self.current['variance'] != last['variance']:
                 self.dirty = True
-            else:
-                self.dirty = False
         else:
             self.dirty = True
 

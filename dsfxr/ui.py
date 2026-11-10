@@ -224,6 +224,7 @@ class ListBox(Widget):
 
         self.active = None
         self.on_select = None
+        self.marked = None
 
         self.items = lambda: []
 
@@ -249,6 +250,8 @@ class ListBox(Widget):
             string = str(label)
             if self.is_item_dirty(item):
                 string += '*'
+            if label == self.marked:
+                string = f'>{string}'
             text = font.render(string, True, fg_color)
 
             screen.blit(text, (x,y))
@@ -277,5 +280,47 @@ class ListBox(Widget):
                         self.on_select(self, target)
         self.clicked_on = False
 
+
+class TextBox(Widget):
+    def __init__(self, app, label, xpos, ypos, width, height):
+        self.app = app
+        self.label = label
+        self.xpos = xpos
+        self.ypos = ypos
+        self.width = width
+        self.height = height
+
+        self.rect = pygame.Rect(xpos, ypos, width, height)
+
+        self.clicked_on = False
+        self.hovered = False
+
+        self.text = ''
+        self.bg_color = (255,255,255)
+
+    def render(self, screen):
+        font = self.app.font
+
+        bg_color = (0,0,0)
+        fg_color = (255,255,255)
+
+        pygame.draw.rect(screen, bg_color, self.rect)
+
+        x = self.xpos
+        y = self.ypos
+        for line in self.text.split('\n'):
+            text = font.render(line, True, fg_color)
+            screen.blit(text, (x,y))
+            y+= text.get_height()
+
+    def update(self, mpos):
+        self.hovered = self.rect.collidepoint(mpos)
+
+    def mouse_down(self, mpos):
+        if self.hovered:
+            self.clicked_on = True
+
+    def mouse_up(self, mpos):
+        self.clicked_on = False
 
 
