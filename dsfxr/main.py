@@ -74,7 +74,8 @@ class PhysicsDemo:
             variance = project.current['variance']
             self.app.load_params(params, variance)
             self.app.version_select.active = None
-
+            self.app.active_version_slider.value = project.active_version
+            self.app.variant_count_slider.value = project.variant_count
 
 
         self.file_select = l = ui.ListBox(self, 'files', xpos, ypos, w, h)
@@ -295,6 +296,25 @@ class PhysicsDemo:
         self.widgets.append(b)
         ypos += h+21
 
+        dw = 63
+        sw = 42
+        self.active_version_slider = s = ui.IntSlider(self, "act'v", xpos, ypos, sw,h)
+        s.min_value = lambda:0
+        s.max_value = self._get_max_version
+        s.on_change = self._update_active_version
+
+        self.widgets.append(s)
+
+        sw = 42
+        self.variant_count_slider = s = ui.IntSlider(self, 'vrnts', xpos+dw, ypos, sw,h)
+        s.value = 1
+        s.min_value = lambda:1
+        s.on_change = self._update_variant_count
+
+
+        self.widgets.append(s)
+
+
 
         #TODO active_version
         #TODO variant_count
@@ -385,6 +405,21 @@ class PhysicsDemo:
 #            channel = sound.play()
 #            time.sleep(sound.get_length()+1)
         """
+
+    def _update_active_version(self, widget):
+        if (active := self.file_select.active) is not None:
+            active[1].active_version = widget.value
+
+    def _update_variant_count(self, widget):
+        if (active := self.file_select.active) is not None:
+            active[1].variant_count = widget.value
+
+
+    def _get_max_version(self):
+        if (active := self.file_select.active) is not None:
+            return len(active[1].versions)-1
+        else:
+            return 1000
 
     def update_wave_buttons(self):
         for idx, button in enumerate(self.wave_buttons):
@@ -480,6 +515,7 @@ class PhysicsDemo:
 
         tick = False
         self.keys = pygame.key.get_pressed()
+        self.mods = pygame.key.get_mods()
         self.mpos = pygame.mouse.get_pos()
 
         for w in self.widgets:
@@ -496,7 +532,9 @@ class PhysicsDemo:
                 if event.button == 1:
                     for w in self.widgets:
                         w.mouse_up(self.mpos)
-
+            elif event.type == pygame.MOUSEWHEEL:
+                for w in self.widgets:
+                    w.scroll(event.y, self.mods&pygame.KMOD_SHIFT, self.mods&pygame.KMOD_CTRL)
 
         now = datetime.datetime.now()
 

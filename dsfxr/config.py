@@ -15,6 +15,8 @@ class Project:
         self.versions = []
         self.current = {'params':{},'variance':{}}
         self.dirty = True
+        self.active_version = 0
+        self.variant_count = 1
 
     def _get_name(self, filename):
         return filename.split('/')[-1][:-5]
@@ -40,6 +42,8 @@ class Project:
             'name': self.name,
             'current': self.current,
             'versions': self.versions,
+#            'active_version': self.active_version,
+#            'variant_count': self.variant_count,
             }
         return result
 

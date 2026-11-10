@@ -2,7 +2,11 @@
 
 import pygame
 
-class Button:
+class Widget:
+    def scroll(self, inc, shift=False, ctrl=False):
+        pass
+
+class Button(Widget):
     def __init__(self, app, label, xpos, ypos, width, height):
         self.app = app
         self.label = label
@@ -54,7 +58,7 @@ class Button:
         self.clicked_on = False
 
 
-class Slider:
+class Slider(Widget):
     def __init__(self, app, label, xpos, ypos, width, height, vmin, vmax, vdef):
         self.app = app
         self.label = label
@@ -119,7 +123,7 @@ class Slider:
         y = self.ypos + (self.height-text.height)/2
         screen.blit(text, (x,y))
 
-        text = font.render(f'{self.value:0.2f}', True, text_color)
+        text = font.render(f'{self.value:0.4f}', True, text_color)
         x = self.xpos + self.width - text.width - 2
         y = self.ypos + (self.height-text.height)/2
         screen.blit(text, (x,y))
@@ -132,6 +136,13 @@ class Slider:
                 self.on_change(self)
             self.value = self.vmin + self.vrange*(mpos[0]-self.xpos)/self.width
             self.value = max(self.vmin,min(self.vmax,self.value))
+
+    def scroll(self, inc, shift=False, ctrl=False):
+        if not self.hovered: return
+        inc*=.05
+        if shift: inc *= 0.1
+        if ctrl: inc*= 0.02
+        self.value += inc
 
     def mouse_down(self, mpos):
         if self.hovered:
@@ -147,8 +158,55 @@ class Slider:
         self.clicked_on = False
 
 
+class IntSlider(Slider):
+    def __init__(self, app, label, xpos, ypos, width, height):
+        super().__init__(app, label, xpos, ypos, width, height, 0,0,0)
+        self.min_value = None
+        self.max_value = None
 
-class ListBox:
+    def mouse_down(self, mpos):
+        pass
+    def mouse_up(self, mpos):
+        pass
+    def scroll(self, inc, shift, ctrl):
+        if not self.hovered: return
+        old_value = self.value
+        self.value += inc
+        if self.min_value:
+            self.value = max(self.value,self.min_value())
+        if self.max_value:
+            self.value = min(self.value,self.max_value())
+        self.value = int(self.value)
+        if self.on_change and self.value != old_value:
+            self.on_change(self)
+
+
+    def render(self, screen):
+        font = self.app.font
+
+        bg_color = (255,255,255)
+        fill_color = (192,192,128)
+        text_color = (0,0,0)
+
+        fg_color = (0,0,0)
+        var_color = (128,128,192)
+
+        pygame.draw.rect(screen, bg_color, self.rect)
+
+        text = font.render(f'{self.label}', True, var_color)
+#        x = self.xpos + (self.width-text.width)/2
+        x = self.xpos + (self.width-text.width)/2
+        y = self.ypos + self.height+2
+        screen.blit(text, (x,y))
+
+        text = font.render(f'{self.value}', True, text_color)
+        x = self.xpos + (self.width - text.width)/2
+        y = self.ypos + (self.height-text.height)/2
+        screen.blit(text, (x,y))
+
+
+
+class ListBox(Widget):
     def __init__(self, app, label, xpos, ypos, width, height):
         self.app = app
         self.label = label
