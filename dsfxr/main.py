@@ -206,6 +206,9 @@ class PhysicsDemo:
             ypos += h+3
 
 
+        ypos += 7
+        self.waveform = c = ui.Canvas(self, 'waveform', xpos, ypos, w, 100)
+        self.widgets.append(c)
 
 
         self.channel = None
@@ -213,6 +216,7 @@ class PhysicsDemo:
         self.get_sound()
 
 
+        #buttons
         xpos = rows[2]
         ypos = 10
         w = 200
@@ -553,6 +557,28 @@ length: {duration*1000:.1f} ms
 {n_samples} samples
 """.strip()
 
+        screen = self.waveform.screen
+        w,h = screen.get_size()
+        dx = n_samples/w
+
+        bg_color = (192,192,192)
+        w_color = (64,64,64)
+
+        as_list = list(buffer)
+        screen.fill(bg_color)
+        if dx > 1:
+            for x in range(w):
+                l = int(x*dx)
+                r = int((x+1)*dx)
+                chunk = as_list[2*l:2*r:2]
+                b = h/2-min(chunk)*h/65535
+                t = h/2-max(chunk)*h/65535
+                pygame.draw.line(screen, w_color, (x,b),(x,t))
+        else:
+            for idx, sample in enumerate(as_list[::2]):
+                x = round(idx/dx)
+                y = h/2-sample*h/65535
+                pygame.draw.line(screen, w_color, (x,h/2),(x,y))
 
     def draw(self):
         for w in self.widgets:

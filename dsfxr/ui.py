@@ -323,4 +323,35 @@ class TextBox(Widget):
     def mouse_up(self, mpos):
         self.clicked_on = False
 
+class Canvas(Widget):
+    def __init__(self, app, label, xpos, ypos, width, height):
+        self.app = app
+        self.label = label
+        self.xpos = xpos
+        self.ypos = ypos
+        self.width = width
+        self.height = height
+
+        self.screen = pygame.Surface((self.width, self.height))
+
+        self.rect = pygame.Rect(xpos, ypos, width, height)
+
+        self.clicked_on = False
+        self.hovered = False
+
+
+    def render(self, screen):
+        screen.blit(self.screen, (self.xpos, self.ypos))
+        pass
+
+    def update(self, mpos):
+        self.hovered = self.rect.collidepoint(mpos)
+
+    def mouse_down(self, mpos):
+        if self.hovered:
+            self.clicked_on = True
+
+    def mouse_up(self, mpos):
+        self.clicked_on = False
+
 
