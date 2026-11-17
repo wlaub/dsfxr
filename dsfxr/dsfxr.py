@@ -12,13 +12,14 @@ class SoundManager:
         self.basedir = basedir
 
         self.sound_infos = {}
-        for filebase in os.listdir(basedir): #TODO walk the tree
-            if filebase[-5:] != '.json': continue
-            filename = os.path.join(basedir, filebase)
-            sound_path = filebase[:-5]
-            thing = SoundInfo(filename)
-            self.sound_infos[sound_path] = thing
-#            print(f'loaded {sound_path}')
+        for dirpath, dirnames, filenames in os.walk(basedir):
+            for filebase in filenames:
+                if filebase[-5:] != '.json': continue
+                filename = os.path.join(dirpath, filebase)
+                sound_path = filename[len(basedir)+1:-5]
+                thing = SoundInfo(filename)
+                self.sound_infos[sound_path] = thing
+#                print(f'loaded {sound_path}')
 
         self.queues = {}
 

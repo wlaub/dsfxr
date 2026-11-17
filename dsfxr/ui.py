@@ -100,6 +100,7 @@ class Slider(Widget):
         self.on_update = None
 
         self.enabled = True
+        self.no_negative = False
 
     def render(self, screen):
         font = self.app.font
@@ -167,6 +168,8 @@ class Slider(Widget):
         if shift: inc *= 0.1
         if ctrl: inc*= 0.02
         self.value += inc
+        if self.value < 0 and self.no_negative:
+            self.value = 0
         if self.on_update:
             self.on_update(self)
         self.app.sound_valid = False

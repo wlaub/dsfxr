@@ -179,6 +179,7 @@ class PhysicsDemo:
         self.params = {}
         for name, (vmin, vmax, vdef) in params.items():
             s = ui.Slider(self, name, xpos, ypos, w, h, vmin, vmax, vdef)
+            if name == 'freq_limit': s.no_negative = True
             self.widgets.append(s)
             self.params[name] = s
             ypos += h+3
@@ -218,6 +219,7 @@ class PhysicsDemo:
         self.variance_sliders = {}
         for name, (vmin, vmax, vdef) in params.items():
             s = ui.Slider(self, name, xpos, ypos, w, h, 0,0.5,0)
+            s.no_negative=True
             s.on_change = update_variance
             self.widgets.append(s)
             self.variance_sliders[name]=s
@@ -583,6 +585,8 @@ class PhysicsDemo:
                     if not self.variance_toggle.active:
                         offset = 0
                     params[param] += offset
+                    if param == 'freq_limit' and params[param] < 0:
+                        params[param] = 0
                     self.params[param].pointer = params[param]
                     self.params[param].variance = v
                     self.variance_sliders[param].pointer = offset
