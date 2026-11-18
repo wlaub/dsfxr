@@ -1,4 +1,5 @@
 import os
+import time
 import json
 import random
 import threading
@@ -32,7 +33,13 @@ class SoundManager:
         self.dirty = set()
         self.dirty_list = []
 
-        #TODO sound regen thread?
+        self.regen_thread = None
+        self.stop_regen = threading.Event()
+
+    def preload_prefix(self, prefix):
+        for sound_path, si in self.sound_infos.items():
+            if sound_path.startswith(prefix):
+                self.preload_sound(sound_path)
 
     def _cache_sound(self, queue):
         with self.lock:
@@ -46,18 +53,40 @@ class SoundManager:
                 self.dirty.add(queue)
                 self.dirty_list.append(queue)
 
+    def start_regen_thread(self):
+        if self.regen_thread is None:
+            self.regen_thread = threading.Thread(target=self._regen_thread)
+            self.regen_thread.start()
+
+    def cleanup(self):
+        self.stop_regen.set()
+        if self.regen_thread is not None:
+            self.regen_thread.join()
+
+    def _regen_thread(self):
+        while not self.stop_regen.is_set():
+            self.thread_tick()
+
     def thread_tick(self):
-        with self.lock:
-            if len(self.cache_list) > 0:
-                q = self.cache_list[0]
-                if q.add_sound():
-                    self.caching.remove(q)
-                    self.cache_list.remove(q)
-            elif len(self.dirty_list) > 0:
-                q = self.cache_list[0]
-                q.make_sound()
-                self.dirty.remove(q)
-                self.dirty_list.remove(q)
+        do_cache = len(self.cache_list) > 0
+        do_dirty = len(self.dirty_list) > 0
+        if do_cache or do_dirty:
+            with self.lock:
+                if do_cache:
+                    q = self.cache_list[0]
+                    if q.add_sound():
+                        self.caching.remove(q)
+                        self.cache_list.remove(q)
+                    else:
+                        self.cache_list.remove(q)
+                        self.cache_list.append(q)
+                elif do_dirty:
+                    q = self.dirty_list[0]
+                    q.make_sound()
+                    self.dirty.remove(q)
+                    self.dirty_list.remove(q)
+        else:
+            time.sleep(0.1) #or w/e
 
     def _get_key(self, sound_path, version = None):
         if version is None:
@@ -89,10 +118,12 @@ class SoundManager:
             if version < 0:
                 version += len(si.versions)
 
-            q = DSFXR(si, version, precache = True) #TODO depend on thread running
+            q = DSFXR(si, version, precache = self.regen_thread is None)
 
             self.queues[key] = q
-            self.caching.add(q)
+            if not q in self.caching:
+                self.caching.add(q)
+                self.cache_list.append(q)
 
         return self.queues[key]
 
@@ -163,6 +194,8 @@ class DSFXR:
         self.dirty = True
 
         if not self.pool:
+            if not self.variants:
+                self.add_sound()
             self.pool = random.sample(self.variants, k=len(self.variants))
 
         result, self.pool = self.pool[0], self.pool[1:]
