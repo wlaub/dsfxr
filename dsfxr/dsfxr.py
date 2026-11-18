@@ -85,6 +85,7 @@ class SoundManager:
                     q.make_sound()
                     self.dirty.remove(q)
                     self.dirty_list.remove(q)
+            time.sleep(0.0001)
         else:
             time.sleep(0.1) #or w/e
 
